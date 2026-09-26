@@ -1,113 +1,125 @@
 # lab3_parallel_map.py
-import multiprocessing
-import time
 import math
+import multiprocessing
 import os
+import sys
+import time
 
-# Constants (adjust as needed for your machine)
-# NUMBER_LIST_SIZE = 200_000  # How many numbers to process
-# VALUES_UPPER_BOUND = 10_000  # Max value for numbers (affects factorial complexity)
-NUMBER_LIST_SIZE = 20  # Reduced for quick testing; increase for real measurement
-VALUES_UPPER_BOUND = 20_000  # Increase/decrease based on runtime
+# Benchmark configuration.
+# The defaults are intended to produce a meaningful CPU-bound workload on
+# typical student hardware while keeping the lab reasonably quick to run.
+NUMBER_LIST_SIZE = 16
+VALUES_UPPER_BOUND = 100_000
 
-# Determine a reasonable pool size
-DEFAULT_POOL_SIZE = os.cpu_count()
+
+def available_cpu_count():
+    """Return the CPU count available to this process, with compatibility fallback."""
+    process_cpu_count = getattr(os, "process_cpu_count", None)
+    if process_cpu_count is not None:
+        count = process_cpu_count()
+    else:
+        count = os.cpu_count()
+
+    return count or 1
+
 
 # ==================================
 # CPU-Intensive Task Function
 # ==================================
 
+
 def cpu_intensive_task(n):
-    """
-    Performs a CPU-bound calculation on n.
-    Example: Calculate factorial.
-    """
+    """Perform a deterministic CPU-bound calculation for one input value."""
     # --- TODO: Task 1 - Implement CPU-intensive task ---
-    # Using math.factorial(n) is a good choice for CPU-bound work.
-    if n < 0:
-        return -1  # Factorial not defined for negative numbers
-    try:
-        result = math.factorial(n)
-        # print(f"Processed {n}")  # Optional: for debugging, remove for timing
-        return result
-    except (ValueError, OverflowError):
-        return -2  # Handle potential errors if needed
+    # A suitable implementation is:
+    # return math.factorial(n)
     # --- End TODO ---
+    raise NotImplementedError("Complete Task 1: cpu_intensive_task")
+
 
 # ==================================
 # Sequential Execution Function
 # ==================================
 
+
 def run_sequential(data):
-    """Runs the CPU-intensive task sequentially on the data."""
-    print("Running sequentially...")
-    results = []
+    """Run cpu_intensive_task on every input value sequentially."""
     # --- TODO: Task 2 - Implement sequential execution ---
-    for item in data:
-        results.append(cpu_intensive_task(item))
+    # Process each item in order and return the complete result list.
     # --- End TODO ---
-    return results
+    raise NotImplementedError("Complete Task 2: run_sequential")
+
 
 # ==================================
-# Parallel Execution Function (using Pool.map)
+# Parallel Execution Function
 # ==================================
+
 
 def run_parallel_map(data, pool_size):
-    """Runs the CPU-intensive task in parallel using Pool.map."""
-    print(f"Running in parallel using Pool.map with {pool_size} processes...")
-    results = []
+    """Run cpu_intensive_task over data with multiprocessing.Pool.map."""
     # --- TODO: Task 3 - Implement parallel execution with Pool.map ---
-    with multiprocessing.Pool(processes=pool_size) as pool:
-        results = pool.map(cpu_intensive_task, data)
+    # Create a multiprocessing.Pool using a with block.
+    # Use pool.map(cpu_intensive_task, data).
+    # Return the complete result list.
     # --- End TODO ---
-    return results
+    raise NotImplementedError("Complete Task 3: run_parallel_map")
+
+
+def build_input_data(list_size, upper_bound):
+    """Build exactly list_size positive integers ending at upper_bound."""
+    if list_size <= 0:
+        raise ValueError("NUMBER_LIST_SIZE must be > 0")
+    if upper_bound < list_size:
+        raise ValueError("VALUES_UPPER_BOUND must be >= NUMBER_LIST_SIZE")
+
+    start = upper_bound - list_size + 1
+    return list(range(start, upper_bound + 1))
+
+
+def choose_pool_size(task_count):
+    """Choose no more workers than available CPUs or useful tasks."""
+    if task_count <= 0:
+        raise ValueError("task_count must be > 0")
+    return max(1, min(available_cpu_count(), task_count))
+
 
 # ==================================
 # Main Execution Logic
 # ==================================
 
 if __name__ == "__main__":
-    # Ensure this runs only in the main process
-    multiprocessing.freeze_support()  # Needed for Windows executable support
+    multiprocessing.freeze_support()
 
-    # Generate some data (list of numbers)
-    # Using a fixed range for consistency in testing factorial calculation time
-    data_to_process = list(range(max(1, VALUES_UPPER_BOUND - NUMBER_LIST_SIZE), VALUES_UPPER_BOUND + 1))
-    actual_list_size = len(data_to_process)  # Use actual size if range logic changes it
-    print(f"Generated {actual_list_size} numbers to process (up to {VALUES_UPPER_BOUND}).")
-    print(f"Using Default Pool Size: {DEFAULT_POOL_SIZE}")
-    print("-" * 30)
+    data_to_process = build_input_data(NUMBER_LIST_SIZE, VALUES_UPPER_BOUND)
+    pool_size = choose_pool_size(len(data_to_process))
 
-    # --- Sequential Run ---
+    print(f"Python: {sys.version.split()[0]} ({sys.implementation.name})")
+    print(f"Multiprocessing start method: {multiprocessing.get_start_method()}")
+    print(f"Available CPU count: {available_cpu_count()}")
+    print(f"Number of tasks: {len(data_to_process)}")
+    print(f"Pool size: {pool_size}")
+    print("-" * 40)
+
     start_seq = time.perf_counter()
     results_seq = run_sequential(data_to_process)
-    end_seq = time.perf_counter()
-    time_seq = end_seq - start_seq
+    time_seq = time.perf_counter() - start_seq
     print(f"Sequential execution time: {time_seq:.4f} seconds")
-    # print(f"Sequential results sample (first 1): {str(results_seq[0])[:60]}...")  # Optional
-    print("-" * 30)
 
-    # --- Parallel Run using map ---
-    start_par_map = time.perf_counter()
-    results_par_map = run_parallel_map(data_to_process, DEFAULT_POOL_SIZE)
-    end_par_map = time.perf_counter()
-    time_par_map = end_par_map - start_par_map
-    print(f"Parallel execution time (map): {time_par_map:.4f} seconds")
-    # print(f"Parallel map results sample (first 1): {str(results_par_map[0])[:60]}...")  # Optional
+    print("-" * 40)
 
-    # --- Verification (Optional) ---
-    # if results_seq == results_par_map:
-    #     print("Verification: Sequential and Parallel results match.")
-    # else:
-    #     print("Verification ERROR: Sequential and Parallel results DO NOT match!")
-    # print("-" * 30)
+    start_par = time.perf_counter()
+    results_par = run_parallel_map(data_to_process, pool_size)
+    time_par = time.perf_counter() - start_par
+    print(f"Parallel execution time (map): {time_par:.4f} seconds")
 
-    # --- Speedup Calculation ---
-    if time_par_map > 0:
-        speedup = time_seq / time_par_map
-        print(f"Speedup (Sequential / Parallel Map): {speedup:.2f}x")
-    else:
-        print("Parallel execution was too fast to measure speedup.")
+    if results_seq != results_par:
+        raise RuntimeError(
+            "Verification failed: sequential and parallel results differ"
+        )
+    print("Verification: sequential and parallel results match.")
 
-    print("-" * 30)
+    if time_par > 0:
+        print(f"Speedup (Sequential / Parallel Map): {time_seq / time_par:.2f}x")
+
+    print("-" * 40)
     print("Lab 3 finished.")
